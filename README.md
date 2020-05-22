@@ -1,2 +1,5 @@
-# htcc
-hyperf 框架分布式事务组件
+# component-creater
+
+```
+composer create-project hyperf/component-creater
+```
