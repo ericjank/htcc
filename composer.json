@@ -18,8 +18,7 @@
         }
     },
     "require": {
-        "php": ">=7.2",
-        "ext-swoole": ">=4.4",
+        "hyperf/snowflake": "~1.1.0",
         "hyperf/di": "~1.1.0"
     },
     "require-dev": {

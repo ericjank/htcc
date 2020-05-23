@@ -22,14 +22,19 @@ use Hyperf\Di\Annotation\AbstractAnnotation;
 class Compensable extends AbstractAnnotation
 {
     /**
-     * @var array
+     * @var string
      */
-    public $master;
+    public $onConfirm;
+
+    /**
+     * @var string
+     */
+    public $onCancel;
 
     /**
      * @var array
      */
-    public $slave;
+    public $steps;
 
 
     public function __construct($value = null)
@@ -37,11 +42,6 @@ class Compensable extends AbstractAnnotation
 
         parent::__construct($value);
 
-    }
-
-    public function collectMethod(string $className, ?string $target): void
-    {
-        AnnotationCollector::collectMethod($className, $target, self::class, $this);
     }
 
 }
