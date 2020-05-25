@@ -8,6 +8,9 @@
     ],
     "description": "A tcc-transaction component for hyperf.",
     "autoload": {
+        "files": [
+            "src/Functions.php"
+        ],
         "psr-4": {
             "Ericjank\\Htcc\\": "src/"
         }

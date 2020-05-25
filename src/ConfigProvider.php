@@ -21,8 +21,8 @@ class ConfigProvider
                 [
                     'id' => 'config',
                     'description' => 'The config for tcc transaction.',
-                    'source' => __DIR__ . '/../publish/tcc.php',
-                    'destination' => BASE_PATH . '/config/autoload/tcc.php',
+                    'source' => __DIR__ . '/../publish/htcc.php',
+                    'destination' => BASE_PATH . '/config/autoload/htcc.php',
                 ],
             ],
             'annotations' => [

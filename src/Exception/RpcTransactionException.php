@@ -6,10 +6,13 @@ declare(strict_types=1);
  *
  * @link     https://www.hyperf.io
  * @document https://doc.hyperf.io
- * @contact  50172189@qq.com
+ * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
-return [
-    'max_retry_count' => 3, // 最多重试次数
-    'max_detection_time'=>5, // 检测补偿事务时间
-];
+namespace Ericjank\Htcc\Exception;
+
+use Hyperf\RpcClient\Exception\RequestException;
+
+class RpcTransactionException extends RequestException
+{
+}

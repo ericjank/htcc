@@ -32,9 +32,10 @@ class Compensable extends AbstractAnnotation
     public $onCancel;
 
     /**
+     * 需要进行事务管理的接口表
      * @var array
      */
-    public $steps;
+    public $clients;
 
 
     public function __construct($value = null)
