@@ -19,7 +19,7 @@ use Hyperf\Di\Annotation\Aspect;
 use Hyperf\RpcClient\ProxyFactory;
 use Hyperf\Rpc\Context as RpcContext;
 use Ericjank\Htcc\Annotation\Compensable;
-// use Ericjank\Htcc\Producer as TransactionProducer;
+use Ericjank\Htcc\Recorder as TransactionRecorder;
 
 /**
  * @Aspect
@@ -46,23 +46,20 @@ class CompensableAnnotationAspect extends AbstractAspect
 
     public function process(ProceedingJoinPoint $proceedingJoinPoint)
     {
-        // 这里不在从主rpc接口方法收集事务需要处理的confirm和cancel了, 有各自方法自行定义, 整个rpc调用过程由事务本身的流程由程序自己控制
         $annotation = $this->getAnnotations($proceedingJoinPoint);
 
-        if ( ! $started = $this->rpcContext->get('_rpctransaction_started')) {
-            // 传递事务ID到其他服务, 其他服务的接口接收这个事务ID进行事务处理
-            $transaction_id = $this->recorder->startTransaction($annotation);
-            $this->rpcContext->set('_transaction_id', $transaction_id);
+        if ( ! $started = $this->recorder->isStarted()) {
+            $transaction_id = $this->recorder->startTransaction($annotation->toArray());
 
-            echo "事务被启动了\n";
+            $master = $this->recorder->addStep([
+                'service' => $proceedingJoinPoint->className,
+                'try' => $proceedingJoinPoint->methodName,
+                'onConfirm' => $annotation->onConfirm,
+                'onCancel' => $annotation->onCancel,
+            ]);
 
             $transactions[$transaction_id] = [
-                $proceedingJoinPoint->className => [
-                    'service' => $proceedingJoinPoint->className,
-                    'tryMethod' => $proceedingJoinPoint->methodName,
-                    'onConfirm' => $annotation->onConfirm,
-                    'onCancel' => $annotation->onCancel,
-                ]
+                $proceedingJoinPoint->className => $master
             ];
 
             if ( !empty($annotation->clients)) {
@@ -72,22 +69,25 @@ class CompensableAnnotationAspect extends AbstractAspect
                 }
             }
 
-            $this->rpcContext->set('_rpctransactions', $transactions);
+            $this->recorder->setTransactions($transactions);
+            
 
             // TODO 如启动了事务
-
             // 第一阶段执行完毕后 执行第二阶段提交或回滚
-            // 所有try均执行完成后进入第二阶段, 避免空悬挂
+            // 所有try均执行完成后进入第二阶段, 要避免空悬挂
             // 协程终止时检测各个RPC接口的状态, 如有异常则执行各个已执行接口的回滚事务, 如无异常则执行各个接口的confirm
-            defer(function () use ($transaction_id, $transactions) {
+            defer(function () {
                 // TODO 如果为调试阶段 检查各个接口是否均实现了cancel和confirm方法, 如未实现则在控制台提示
 
-                $error = $this->rpcContext->get('_rpctransaction_error');
+                $transaction_id = $this->recorder->getTransactionID();
+
+                $error = $this->recorder->getError();
                 var_dump("error", $error);
 
-                $transactionSteps = $this->rpcContext->get('_rpctransaction_steps') ?? [];
+                // 异常处理器捕获到的异常
+                $rpcClientError = $this->recorder->getErrorMessage();
 
-                if ( ! empty($error)) 
+                if ( ! empty($rpcClientError)) 
                 {
                     // TODO 如果接口报错则进行回滚
                     // 接口如果报错则存储到队列中, 准备回滚
@@ -104,12 +104,17 @@ class CompensableAnnotationAspect extends AbstractAspect
                     echo "执行了事务: $transaction_id, 成功开始第二阶段, 提交到队列\n";
                 }
 
-                $action = ( ! empty($error)) ? 'cancel' : 'confirm';
-                $this->recorder->$action($transaction_id, $transactionSteps);
+                $action = ( ! empty($rpcClientError)) ? 'cancel' : 'confirm';
+                $this->recorder->$action();
 
                 // TODO 释放资源
 
             });
+
+            // $res = $proceedingJoinPoint->process();
+            // $master['result'] = $res;
+
+            // return $res;
         }
 
         return $proceedingJoinPoint->process();

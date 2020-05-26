@@ -11,20 +11,12 @@ declare(strict_types=1);
  */
 use Hyperf\Utils\ApplicationContext;
 use Hyperf\Rpc\Context as RpcContext;
+use Ericjank\Htcc\Recorder;
 
 if (! function_exists('inRpcTrans')) 
 {
     function inRpcTrans() {
-        $started = ApplicationContext::getContainer()->get(RpcContext::class)->get('_rpctransaction_started');
-        return $started ? true : false;
-    }
-}
-
-if (! function_exists('getRpcTransID')) 
-{
-    function getRpcTransID() {
-        $started = ApplicationContext::getContainer()->get(RpcContext::class)->get('_transaction_id');
-        return $started ? true : false;
+        return ApplicationContext::getContainer()->get(Recorder::class)->isStarted() ? true : false;
     }
 }
 
@@ -33,17 +25,15 @@ if (! function_exists('hasRpcTransError'))
     // TODO 被调用的接口try方法内需调用 hasRpcTransError 防悬挂
     function hasRpcTransError()
     {
-        // 上下文? redis?
-
-        $rpc_error = ApplicationContext::getContainer()->get(RpcContext::class)->get('_rpctransaction_error');
-        return ! empty($rpc_error) ? true : false;
+        $rpc_error = ApplicationContext::getContainer()->get(Recorder::class)->getError();
+        return ! empty($rpc_error) ? $rpc_error : false;
     }
 }
 
-if (! function_exists('getTransSteps'))
+if (! function_exists('getRpcTransSteps'))
 {
-    function getTransSteps() 
+    function getRpcTransSteps() 
     {
-        return ApplicationContext::getContainer()->get(RpcContext::class)->get('_rpctransaction_steps') ?? [];
+        return ApplicationContext::getContainer()->get(Recorder::class)->getSteps();
     }
 }

@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace Ericjank\Htcc;
 
+use Hyperf\Utils\ApplicationContext;
+
 class Producer
 {
     public static function send($message, $type = 'success')

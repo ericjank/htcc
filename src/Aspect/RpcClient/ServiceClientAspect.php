@@ -12,14 +12,16 @@ declare(strict_types=1);
 
 namespace Ericjank\Htcc\Aspect\RpcClient;
 
+use Hyperf\Di\Annotation\Inject;
 use Hyperf\Di\Annotation\Aspect;
 use Hyperf\Di\Aop\AbstractAspect;
 use Hyperf\Di\Aop\ProceedingJoinPoint;
 use Hyperf\RpcClient\Exception\RequestException;
 use Hyperf\RpcClient\ServiceClient;
 use Hyperf\Rpc\Context as RpcContext;
-use Ericjank\Htcc\Aspect\CompensableAnnotationAspect;
+use Hyperf\Rpc\Exception\RecvException;
 use Ericjank\Htcc\Exception\RpcTransactionException;
+use Ericjank\Htcc\Recorder;
 
 /**
  * @Aspect()
@@ -37,6 +39,12 @@ class ServiceClientAspect extends AbstractAspect
      */
     protected $rpcContext;
 
+    /**
+     * @Inject
+     * @var Recorder
+     */
+    protected $recorder;
+
     // public function __construct()
     // {
     // }
@@ -46,12 +54,10 @@ class ServiceClientAspect extends AbstractAspect
         $result = self::guessBelongsToRelation();
 
         // 当调用rpc接口时检测是否需要进行事务处理
-        $started = $this->rpcContext->get('_rpctransaction_started');
-
-        if ( $started) 
+        if ( $started = $this->recorder->isStarted()) 
         {
-            $transaction_id = $this->rpcContext->get('_transaction_id');
-            $transactions = $this->rpcContext->get('_rpctransactions');
+            $transaction_id = $this->recorder->getTransactionID();
+            $transactions = $this->recorder->getTransactions();
 
             if (isset($transactions[$transaction_id][$result['class']])) 
             {
@@ -81,17 +87,36 @@ class ServiceClientAspect extends AbstractAspect
                         // 添加到执行成功的队列
                         $transaction['result'] = $res;
                     }
-                    catch (RequestException $e) {
-                        $this->rpcContext->set('_rpctransaction_error', $transaction);
+                    catch(RecvException $e) 
+                    {
+                        // 对于网络波动造成的异常, 有可能请求已经到达对端接口且执行成功, 但仍然要判定事务中断回滚
+                        $this->recorder->setError($transaction);
 
                         // 抛出异常 其他后续接口调用不会再执行, 也无需回滚等操作
                         // throw new RpcTransactionException($e->getMessage(), $e->getCode());
-                        throw new RequestException($e->getMessage(), $e->getCode());
+                        throw new RpcTransactionException($e->getMessage(), $e->getCode());
+                    }
+                    catch (RpcTransactionException $e) {
+                        // 对端接口直接抛出异常
+                        $this->recorder->setError($transaction);
+
+                        // 抛出异常 其他后续接口调用不会再执行, 也无需回滚等操作
+                        // throw new RpcTransactionException($e->getMessage(), $e->getCode());
+                        throw new RpcTransactionException($e->getMessage(), $e->getCode());
+                    }
+                    catch (RequestException $e) {
+                        $this->recorder->setError($transaction);
+
+                        // 抛出异常 其他后续接口调用不会再执行, 也无需回滚等操作
+                        // throw new RpcTransactionException($e->getMessage(), $e->getCode());
+                        throw new RpcTransactionException($e->getMessage(), $e->getCode());
                     }
                     finally
                     {
+                        echo "无论如何都保存这个事务信息用于最后执行回滚或确认\n";
+
                         // 无论如何都保存这个事务信息用于最后执行回滚或确认
-                        $this->setSteps($transaction);
+                        $this->recorder->addStep($transaction);
                     }
 
                     return $res;
@@ -106,15 +131,6 @@ class ServiceClientAspect extends AbstractAspect
     {
         $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 9);
         return isset($backtrace[7]) ? $backtrace[7] : null;
-    }
-
-    private function setSteps($transaction) 
-    {
-        $steps = $this->rpcContext->get('_rpctransaction_steps') ?? [];
-        $steps []= $transaction;
-        $this->rpcContext->set('_rpctransaction_steps', $steps);
-
-        return $steps;
     }
 
 }

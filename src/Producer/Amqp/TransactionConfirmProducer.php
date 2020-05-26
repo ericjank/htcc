@@ -8,10 +8,10 @@ use Hyperf\Amqp\Annotation\Producer;
 use Hyperf\Amqp\Message\ProducerMessage;
 
 /**
- * TransactionProducer
+ * TransactionConfirmProducer
  * @Producer(exchange="tcc", routingKey="transaction-confirm")
  */
-class TransactionFailProducer extends ProducerMessage
+class TransactionConfirmProducer extends ProducerMessage
 {
     public function __construct($message)
     {

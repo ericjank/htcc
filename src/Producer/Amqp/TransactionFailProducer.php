@@ -8,7 +8,7 @@ use Hyperf\Amqp\Annotation\Producer;
 use Hyperf\Amqp\Message\ProducerMessage;
 
 /**
- * TransactionProducer
+ * TransactionFailProducer
  * @Producer(exchange="tcc", routingKey="transaction-fail")
  */
 class TransactionFailProducer extends ProducerMessage

@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Ericjank\Htcc\Recorder\Redis;
 
-use Hyperf\Di\Annotation\Inject;
+use Hyperf\Utils\ApplicationContext;
 use Hyperf\Redis\Redis;
-use Hyperf\Snowflake\IdGeneratorInterface;
-use Ericjank\Htcc\Producer as TransactionProducer;
 
 /**
  * TransactionRecorder 事务记录Redis驱动
@@ -16,20 +14,20 @@ use Ericjank\Htcc\Producer as TransactionProducer;
 class TransactionRecorder
 {
     /**
-     * @Inject()
      * @var Redis
      */
     private $redis;
 
-    public function add($params)
+    public function __construct()
     {
-        $container = ApplicationContext::getContainer();
-        $tid = (string)$container->get(IdGeneratorInterface::class)->generate();
+        $this->redis = ApplicationContext::getContainer()->get(Redis::class);
+    }
 
+    public function add($tid, $annotation)
+    {
         $now = time();
         $data = [
-            'tid' => $tid,
-            'content' => $params,
+            'annotation' => $annotation,
             'status' => 'normal',
             'retried_cancel_count' => 0,
             'retried_confirm_count' => 0,
@@ -39,6 +37,8 @@ class TransactionRecorder
             'create_time' => $now,
             'last_update_time' => $now,
         ];
+
+        print_r($data);
         $this->redis->hSet("Htcc", $tid, json_encode($data));
         return $tid;
     }
@@ -48,13 +48,14 @@ class TransactionRecorder
         $data = $this->redis->hget("Htcc", $tid);
     }
 
-    public function confirm($tid) 
+    public function confirm($tid, $steps) 
     {
         $data = $this->redis->hget("Htcc", $tid);
 
         $data = json_decode($data, true);
 
         $data['status'] = 'confirm';
+        $data['steps'] = $steps;
         $data['last_update_time'] = time();
 
         return $this->redis->hSet('Htcc', $tid, json_encode($data));
@@ -66,8 +67,8 @@ class TransactionRecorder
 
         $data = json_decode($data, true);
 
-        $data['steps'] = $steps;
         $data['status'] = 'cancel';
+        $data['steps'] = $steps;
         $data['last_update_time'] = time();
 
         return $this->redis->hSet('Htcc', $tid, json_encode($data));

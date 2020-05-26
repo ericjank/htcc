@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Amqp\Consumers;
+namespace Ericjank\Htcc\Consumer\Amqp;
 
 use Hyperf\Amqp\Annotation\Consumer;
 use Hyperf\Amqp\Message\ConsumerMessage;
 use Hyperf\Amqp\Result;
 
 /**
- * @Consumer(exchange="tcc", routingKey="transaction", queue="normal", nums=1)
+ * @Consumer(exchange="tcc", routingKey="transaction", queue="transaction-normal", nums=1)
  */
 class TransactionConsumer extends ConsumerMessage
 {
