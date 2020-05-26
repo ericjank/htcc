@@ -28,9 +28,11 @@ class TransactionConfirmConsumer extends ConsumerMessage
 
         // TODO 从redis里获取事务详情进行处理
         $transaction = $this->redis->hget('Htcc', $tid);
-        var_dump(json_decode($transaction, true));
+        print_r(json_decode($transaction, true));
 
-        return Result::NACK;
+        // $transaction[]
+
+        return Result::ACK;
     }
 
     public function isEnable(): bool

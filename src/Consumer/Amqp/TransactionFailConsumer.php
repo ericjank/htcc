@@ -30,6 +30,15 @@ class TransactionFailConsumer extends ConsumerMessage
         $transaction = $this->redis->hget('Htcc', $tid);
         var_dump(json_decode($transaction, true));
 
+
+        // TODO 如果接口报错则进行回滚
+        // foreach ($transactionSteps as $key => $value) {
+        //     TransactionProducer::send([
+        //         'tid' => $transaction_id, 
+        //         'transaction', $value
+        //     ], 'fail');
+        // }
+
         return Result::ACK;
     }
 

@@ -38,39 +38,32 @@ class TransactionRecorder
             'last_update_time' => $now,
         ];
 
-        print_r($data);
         $this->redis->hSet("Htcc", $tid, json_encode($data));
         return $tid;
     }
 
-    public function setStatus($tid, $status) 
+    public function setStatus($tid, $status, $steps = null) 
     {
         $data = $this->redis->hget("Htcc", $tid);
+        $data = json_decode($data, true);
+        $data['status'] = $status;
+        $data['last_update_time'] = time();
+
+        if (! is_null($steps) )
+        {
+            $data['steps'] = $steps;
+        }
+
+        return $this->redis->hSet('Htcc', $tid, json_encode($data));
     }
 
     public function confirm($tid, $steps) 
     {
-        $data = $this->redis->hget("Htcc", $tid);
-
-        $data = json_decode($data, true);
-
-        $data['status'] = 'confirm';
-        $data['steps'] = $steps;
-        $data['last_update_time'] = time();
-
-        return $this->redis->hSet('Htcc', $tid, json_encode($data));
+        return $this->setStatus($tid, 'confirm', $steps);
     }
 
     public function cancel($tid, $steps)
     {
-        $data = $this->redis->hget("Htcc", $tid);
-
-        $data = json_decode($data, true);
-
-        $data['status'] = 'cancel';
-        $data['steps'] = $steps;
-        $data['last_update_time'] = time();
-
-        return $this->redis->hSet('Htcc', $tid, json_encode($data));
+        return $this->setStatus($tid, 'cancel', $steps);
     }
 }

@@ -63,11 +63,13 @@ public function sendSmsCancel($message, $user_id)
 }
 ```
 
-* try try阶段执行的方法名
+* try try阶段执行的方法名, 如不指定try则该接口全部方法在本次事务中如有调用都进行事务处理
 * onConfirm confirm阶段执行的方法名
 * onCancel cancel阶段执行的方法名
 * clients 当前事务需要监控的接口
 * service 接口消费者类
+
+如未设置confirm和cancel方法 则默认以调用方法开头以Confirm或Cancel作为方法后缀自动调用
 
 # 实现try, confirm,cancel方法
 
