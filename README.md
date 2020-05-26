@@ -73,5 +73,12 @@ public function sendSmsCancel($message, $user_id)
 
 # 实现try, confirm,cancel方法
 
-被调用端接口需实现try, confirm,cancel方法， 方法内如发生错误需要抛出异常 throw new RpcTransactionException 才能被上层接口捕获并进行相应的处理
-为了不影响自身接口在非事务情况下的使用，可以使用 inRpcTrans() 方法判断当前是否在rpc事务中，仅在事务中抛出 throw new RpcTransactionException，其他情况则按照原有流程正常执行即可
+被调用端接口需实现try, confirm,cancel方法， 方法内如发生错误需要抛出 Ericjank\Htcc\Exception\RpcTransactionException 异常 , 才能被上层接口捕获并进行相应的处理
+为了不影响接口自身在非事务情况下的使用(或者说兼容事务与非事务两种情况)，可以使用 inRpcTrans() 方法判断当前是否在rpc事务中，仅在事务中抛出  RpcTransactionException 异常，其他情况则按照原有流程正常执行即可;
+
+也可以用函数 rpcTransCallback 进行简化处理
+```
+rpcTransCallback(function() {
+    // 非事务状态下执行的代码
+}, '事务状态下的异常消息', '事务状态下的异常CODE')
+```

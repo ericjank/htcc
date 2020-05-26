@@ -11,12 +11,26 @@ declare(strict_types=1);
  */
 use Hyperf\Utils\ApplicationContext;
 use Hyperf\Rpc\Context as RpcContext;
+use Ericjank\Htcc\Exception\RpcTransactionException;
 use Ericjank\Htcc\Recorder;
 
 if (! function_exists('inRpcTrans')) 
 {
     function inRpcTrans() {
         return ApplicationContext::getContainer()->get(Recorder::class)->isStarted() ? true : false;
+    }
+}
+
+if (! function_exists('rpcTransCallback')) 
+{
+    function rpcTransCallback($normal, $message = "接口异常", $code = 0) {
+
+        if (inRpcTrans())
+        {
+            throw new RpcTransactionException($message, $code);    
+        }
+
+        return $normal();
     }
 }
 
