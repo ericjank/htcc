@@ -13,9 +13,11 @@ declare(strict_types=1);
 namespace Ericjank\Htcc;
 
 use Hyperf\Di\Annotation\Inject;
+use Psr\Container\ContainerInterface;
 use Hyperf\Snowflake\IdGeneratorInterface;
 use Hyperf\Rpc\Context as RpcContext;
 use Ericjank\Htcc\Producer as TransactionProducer;
+use Ericjank\Htcc\Exception\RpcTransactionException;
 
 class Recorder
 {
@@ -24,6 +26,12 @@ class Recorder
      * @var RpcContext
      */
     protected $context;
+
+    /**
+     * @Inject
+     * @var ContainerInterface
+     */
+    protected $container;
 
     /**
      * @Inject
@@ -48,6 +56,19 @@ class Recorder
         }
     }
 
+    public function __call($method, $arguments)
+    {
+        if ( method_exists($this->handler, $method) ) 
+        {
+            return call_user_func_array([$this->handler, $method], $arguments);
+        }
+    }
+
+    public function getTransactionByID($tid)
+    {
+        return $this->handler->get($tid);
+    }
+
     public function startTransaction($annotation)
     {
         $tid = (string)$this->idGenerator->generate();
@@ -67,7 +88,10 @@ class Recorder
 
         // TODO 日志
         echo "执行了事务: $tid, 成功开始第二阶段, 提交到队列\n";
-        return TransactionProducer::confirm($tid);
+
+        // TODO 确保消息投递成功
+
+        return TransactionProducer::confirm(['tid' => $tid, 'steps' => $this->getSteps()]);
     }
 
     public function cancel()
@@ -77,7 +101,10 @@ class Recorder
 
         // TODO 日志
         echo "执行了事务: $tid, 失败回滚, 提交到队列\n";
-        return TransactionProducer::cancel($tid);
+
+        // TODO 确保消息投递成功
+
+        return TransactionProducer::cancel(['tid' => $tid, 'steps' => $this->getSteps()]);
     }
 
     public function getTransactionID()
@@ -87,12 +114,28 @@ class Recorder
 
     public function setTransactions($transactions)
     {
+        $tid = $this->getTransactionID();
+
+        if (! isset($transactions[$tid]))
+        {
+            throw new RpcTransactionException("Can not find transaction", 4001);
+        }
+
+        foreach ($transactions[$tid] as $proxyClass => $server) {
+            $this->checkMethodExists($server['service'], [
+                'try' => $server['try'], 
+                'confirm' => $server['onConfirm'], 
+                'cancel' => $server['onCancel']
+            ]);
+        }
+
         $this->context->set('_rpctransactions', $transactions);
     }
 
-    public function getTransactions()
+    public function getTransactions($tid = null)
     {
-        return $this->context->get('_rpctransactions') ?? [];
+        $transactions = $this->context->get('_rpctransactions') ?? [];
+        return is_null($tid) ? $transactions : [ 'tid' => $tid, 'transactions' => $transactions[$tid] ];
     }
 
     public function addStep($transaction) 
@@ -127,5 +170,28 @@ class Recorder
     public function getError()
     {
         return $this->context->get('_rpctransaction_error') ?? null;
+    }
+
+    private function checkMethodExists($className, $methods)
+    {
+        $container = $this->container->get($className);
+
+        if ( ! $container)
+        {
+            throw new RpcTransactionException(sprintf("Can not find service `%s`", $className), 4001);
+        }
+
+        if ( ! is_array($methods))
+        {
+            $methods = [$methods];
+        }
+
+        foreach ($methods as $action => $method) 
+        {
+            if ( ! method_exists($container, $method))
+            {
+                throw new RpcTransactionException(sprintf("[Rpc Transaction]Can not find %s method `%s` for service `%s`, please check your `Compensable` annotation", $action, $method, $className), 4001);
+            }
+        }
     }
 }

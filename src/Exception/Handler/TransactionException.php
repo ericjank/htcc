@@ -17,10 +17,16 @@ use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Ericjank\Htcc\Exception\RpcTransactionException;
 use Hyperf\Rpc\Context as RpcContext;
+use Hyperf\Contract\StdoutLoggerInterface;
 
 class TransactionException extends ExceptionHandler
 {
-     /**
+    /**
+     * @var StdoutLoggerInterface
+     */
+    protected $logger;
+    
+    /**
      * @var FormatterInterface
      */
     protected $formatter;
@@ -30,16 +36,15 @@ class TransactionException extends ExceptionHandler
      */
     protected $rpcContext;
 
-    public function __construct(FormatterInterface $formatter, RpcContext $rpcContext)
+    public function __construct(FormatterInterface $formatter, RpcContext $rpcContext, StdoutLoggerInterface $logger)
     {
-        // $this->logger = $logger;
+        $this->logger = $logger;
         $this->formatter = $formatter;
         $this->rpcContext = $rpcContext;
     }
 
     public function handle(Throwable $throwable, ResponseInterface $response)
     {
-        // $this->logger->warning($this->formatter->format($throwable));
         if ($throwable instanceof RpcTransactionException) {
             $data = [
                 'code' => $throwable->getCode(),
@@ -47,6 +52,8 @@ class TransactionException extends ExceptionHandler
             ];
 
             $this->rpcContext->set('_rpcclienterror', $data);
+
+            $this->logger->warning($throwable->getMessage());
 
             // 阻止异常冒泡
             $this->stopPropagation();

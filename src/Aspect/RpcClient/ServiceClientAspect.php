@@ -64,26 +64,29 @@ class ServiceClientAspect extends AbstractAspect
                 $transaction['method'] = $method;
                 $transaction['params'] = $params;
 
-                if ( ! isset($transaction['try']) || $method == $transaction['try']) {
-                    $confirMethod = (isset($transaction['onConfirm']) && ! empty($transaction['onConfirm'])) ? $transaction['onConfirm'] : $method . 'Confirm';
-                    $cancelMethod = (isset($transaction['onCancel']) && ! empty($transaction['onCancel'])) ? $transaction['onCancel'] : $method . 'Cancel';
+                if ( ! isset($transaction['try']) || $method == $transaction['try'])
+                {
+                    $transaction['onConfirm'] = (isset($transaction['onConfirm']) && ! empty($transaction['onConfirm'])) ? $transaction['onConfirm'] : $method . 'Confirm';
+                    $transaction['onCancel'] = (isset($transaction['onCancel']) && ! empty($transaction['onCancel'])) ? $transaction['onCancel'] : $method . 'Cancel';
 
-                    try 
+                    try
                     {
                         $res = $proceedingJoinPoint->process();
                         $transaction['result'] = $res;
                     }
-                    catch(RecvException $e) 
+                    catch(RecvException $e)
                     {
                         // 对于网络波动造成的异常, 有可能请求已经到达对端接口且执行成功, 但仍然要判定事务中断回滚
                         $this->recorder->setError($transaction);
                         throw new RpcTransactionException($e->getMessage(), $e->getCode());
                     }
-                    catch (RpcTransactionException $e) {
+                    catch (RpcTransactionException $e)
+                    {
                         $this->recorder->setError($transaction);
                         throw new RpcTransactionException($e->getMessage(), $e->getCode());
                     }
-                    catch (RequestException $e) {
+                    catch (RequestException $e)
+                    {
                         $this->recorder->setError($transaction);
                         throw new RpcTransactionException($e->getMessage(), $e->getCode());
                     }

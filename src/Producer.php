@@ -49,11 +49,11 @@ class Producer
 
     public static function confirm($tid)
     {
-        self::send($tid, 'confirm');
+        return self::send($tid, 'confirm');
     }
 
     public static function cancel($tid)
     {
-        self::send($tid, 'fail');
+        return self::send($tid, 'fail');
     }
 }

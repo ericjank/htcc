@@ -4,21 +4,24 @@ declare(strict_types=1);
 
 namespace Ericjank\Htcc\Consumer\Amqp;
 
-use Hyperf\Amqp\Annotation\Consumer;
+use Hyperf\Di\Annotation\Inject;
+use Psr\Container\ContainerInterface;
 use Hyperf\Amqp\Message\ConsumerMessage;
-use Hyperf\Amqp\Result;
+use Ericjank\Htcc\Recorder;
 
-/**
- * @Consumer(exchange="tcc", routingKey="transaction", queue="transaction-normal", nums=1)
- */
 class TransactionConsumer extends ConsumerMessage
 {
-    public function consume($data): string
-    {
-        echo "消息队列执行:";
-        var_dump($data);
-        return Result::ACK;
-    }
+    /**
+     * @Inject
+     * @var ContainerInterface
+     */
+    public $container;
+
+    /**
+     * @Inject
+     * @var Recorder
+     */
+    public $recorder;
 
     public function isEnable(): bool
     {

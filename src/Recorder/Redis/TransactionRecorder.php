@@ -29,17 +29,46 @@ class TransactionRecorder
         $data = [
             'annotation' => $annotation,
             'status' => 'normal',
-            'retried_cancel_count' => 0,
-            'retried_confirm_count' => 0,
-            'retried_cancel_nsq_count' => 0,
-            'retried_confirm_nsq_count' => 0,
-            'retried_max_count' => config('htcc.max_retry_count', 1),
+            // 'retried_cancel_count' => 0,
+            // 'retried_confirm_count' => 0,
+            // 'retried_cancel_queue_count' => 0,
+            // 'retried_confirm_queue_count' => 0,
+            // 'retried_max_count' => config('htcc.max_retry_count', 1),
             'create_time' => $now,
             'last_update_time' => $now,
         ];
 
         $this->redis->hSet("Htcc", $tid, json_encode($data));
         return $tid;
+    }
+
+    public function get($tid)
+    {
+        $data = $this->redis->hget("Htcc", $tid);
+        return json_decode($data, true);
+    }
+
+    private function set($tid, $params)
+    {
+        $data = $this->get($tid);
+        foreach ($params as $key => $value) {
+            $data[$key] = $value;
+        }
+
+        return $this->redis->hSet('Htcc', $tid, json_encode($data));
+    }
+
+    public function setCounter($tid, $counter)
+    {
+        return $this->set($tid, [
+            'counter' => $counter
+        ]);
+    }
+
+    public function getCounter($tid)
+    {
+        $data = $this->get($tid);
+        return isset($data['counter']) ? $data['counter'] : [];
     }
 
     public function setStatus($tid, $status, $steps = null) 

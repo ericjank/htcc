@@ -59,15 +59,14 @@ class CompensableAnnotationAspect extends AbstractAspect
         if ( ! $started = $this->recorder->isStarted()) {
             $transaction_id = $this->recorder->startTransaction($annotation->toArray());
 
-            $arguments = $proceedingJoinPoint->getArguments();
-            $params = isset($arguments[1]) ? $arguments[1] : null;
-
             $master = $this->recorder->addStep([
-                'service' => $proceedingJoinPoint->className,
-                'try' => $proceedingJoinPoint->methodName,
-                'onConfirm' => $annotation->onConfirm,
-                'onCancel' => $annotation->onCancel,
-                'params' => $arguments
+                'service'   => $proceedingJoinPoint->className,
+                'try'       => $proceedingJoinPoint->methodName,
+                'onConfirm' => (isset($annotation->onConfirm) && ! empty($annotation->onConfirm)) ? 
+                    $annotation->onConfirm : $proceedingJoinPoint->methodName . 'Confirm',
+                'onCancel'  => (isset($annotation->onCancel) && ! empty($annotation->onCancel)) ? 
+                    $annotation->onCancel : $proceedingJoinPoint->methodName . 'Cancel',
+                'params'    => $proceedingJoinPoint->getArguments()
             ]);
 
             $transactions[$transaction_id] = [
@@ -92,6 +91,9 @@ class CompensableAnnotationAspect extends AbstractAspect
                     $transactions[$transaction_id][$value['proxy']] = $value;
                 }
             }
+
+            var_dump("transactions");
+            print_r($transactions);
 
             $this->recorder->setTransactions($transactions);
             
@@ -129,4 +131,5 @@ class CompensableAnnotationAspect extends AbstractAspect
         $metadata = $proceedingJoinPoint->getAnnotationMetadata();
         return $metadata->method[Compensable::class] ?? null;
     }
+    
 }
