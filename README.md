@@ -33,7 +33,7 @@ return [
 # 在需要进行事务处理的第一个方法体添加注解
 
 ```
-use Ericjank\Htcc\Aspect\CompensableAnnotationAspect;
+use Ericjank\Htcc\Annotation\Compensable;
 
 /**
  * @Compensable(
