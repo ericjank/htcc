@@ -87,7 +87,6 @@ class Recorder
         $this->handler->confirm($tid, $this->getSteps());
 
         // TODO 日志
-        echo "执行了事务: $tid, 成功开始第二阶段, 提交到队列\n";
 
         // TODO 确保消息投递成功
 
@@ -100,7 +99,6 @@ class Recorder
         $this->handler->cancel($tid, $this->getSteps());
 
         // TODO 日志
-        echo "执行了事务: $tid, 失败回滚, 提交到队列\n";
 
         // TODO 确保消息投递成功
 

@@ -9,10 +9,13 @@ use Hyperf\Redis\Redis;
 
 /**
  * TransactionRecorder 事务记录Redis驱动
- * TODO 使用LUA合并
+ * TODO 使用LUA合并, 改造hset用法, 目前存储json串用法不适合hashtable
  */
 class TransactionRecorder
 {
+    use Traits\Rollback;
+    use Traits\Confirm;
+
     /**
      * @var Redis
      */
@@ -29,11 +32,6 @@ class TransactionRecorder
         $data = [
             'annotation' => $annotation,
             'status' => 'normal',
-            // 'retried_cancel_count' => 0,
-            // 'retried_confirm_count' => 0,
-            // 'retried_cancel_queue_count' => 0,
-            // 'retried_confirm_queue_count' => 0,
-            // 'retried_max_count' => config('htcc.max_retry_count', 1),
             'create_time' => $now,
             'last_update_time' => $now,
         ];
@@ -84,6 +82,20 @@ class TransactionRecorder
         }
 
         return $this->redis->hSet('Htcc', $tid, json_encode($data));
+    }
+
+    private function reSetTo($tid, $counter, $status, $to)
+    {
+        $this->setCounter($tid, $counter);
+
+        $transaction = $this->get($tid);
+
+        $this->redis->hDel('Htcc', $tid);
+
+        $transaction['status'] = $status;
+
+        // TODO 最终持久化到数据库
+        return $this->redis->hSet($to, $tid, json_encode($transaction));
     }
 
     public function confirm($tid, $steps) 

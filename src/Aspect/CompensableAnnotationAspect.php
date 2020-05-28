@@ -13,7 +13,6 @@ declare(strict_types=1);
 namespace Ericjank\Htcc\Aspect;
 
 use Hyperf\Di\Annotation\Inject;
-use Hyperf\Utils\ApplicationContext;
 use Hyperf\Di\Aop\AbstractAspect;
 use Hyperf\Di\Aop\ProceedingJoinPoint;
 use Hyperf\Di\Annotation\Aspect;
@@ -92,9 +91,6 @@ class CompensableAnnotationAspect extends AbstractAspect
                 }
             }
 
-            var_dump("transactions");
-            print_r($transactions);
-
             $this->recorder->setTransactions($transactions);
             
 
@@ -102,26 +98,20 @@ class CompensableAnnotationAspect extends AbstractAspect
             // 所有try均执行完成后进入第二阶段, 要避免空悬挂
             // 协程终止时检测各个RPC接口的状态, 如有异常则执行各个已执行接口的回滚事务, 如无异常则执行各个接口的confirm
             defer(function () {
-                // TODO 如果为调试阶段 检查各个接口是否均实现了cancel和confirm方法, 如未实现则在控制台提示
                 $transaction_id = $this->recorder->getTransactionID();
 
                 // $error = $this->recorder->getError();
 
-                // 异常处理器捕获到的异常
-                $rpcClientError = $this->recorder->getErrorMessage();
+                $rpcError = $this->recorder->getErrorMessage();
 
-                $action = ( ! empty($rpcClientError)) ? 'cancel' : 'confirm';
+                $action = ( ! empty($rpcError)) ? 'cancel' : 'confirm';
                 $this->recorder->$action();
-
-                echo "异步处理cancel或confirm\n";
 
                 // TODO 释放资源
             });
         }
 
         $res = $proceedingJoinPoint->process();
-
-        echo "当前方法执行完毕\n";
 
         return $res;
     }
