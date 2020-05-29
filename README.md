@@ -51,7 +51,7 @@ use Ericjank\Htcc\Annotation\Compensable;
  */
 public function sendSms($message, $user_id) 
 { 
-    ...  
+    ...
 }
 
 public function sendSmsConfirm($message, $user_id)
