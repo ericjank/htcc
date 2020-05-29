@@ -19,6 +19,8 @@ class TransactionConfirmProducer extends ProducerMessage
         // $this->poolName = 'pool2';
 
         // $user = User::where('id', $id)->first();
+        
+
         $this->payload = $message;
     }
 }

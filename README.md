@@ -2,6 +2,7 @@
 
 ```
 composer require ericjank/htcc
+ php bin/hyperf.php vendor:publish ericjank/htcc
 ```
 
 # 注册异常处理器
@@ -84,3 +85,12 @@ rpcTransCallback(function() {
     // 非事务状态下执行的代码
 }, '事务状态下的异常消息', '事务状态下的异常CODE')
 ```
+
+
+# 函数
+
+* getRpcTransID 获取当前事务ID(支持在事务发起端和远程接口)
+* inRpcTrans 检测是否在事务中
+* rpcTransCallback 
+* hasRpcTransError 获取事务抛出的错误信息(支持在事务发起端和远程接口的try方法内)
+* getRpcTransSteps 获取事务流程数据(支持在事务发起端)

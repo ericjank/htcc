@@ -72,13 +72,18 @@ class Recorder
     public function startTransaction($annotation)
     {
         $tid = (string)$this->idGenerator->generate();
-        $this->context->set('_rpctransaction_started', true);
+        $this->setStart();
         $this->handler->add($tid, $annotation);
-        $this->context->set('_transaction_id', $tid);
+        $this->setTransactionID($tid);
 
         // TODO 日志
 
         return $tid;
+    }
+
+    public function setStart()
+    {
+        $this->context->set('_rpctransaction_started', true);
     }
 
     public function confirm()
@@ -103,6 +108,11 @@ class Recorder
         // TODO 确保消息投递成功
 
         return TransactionProducer::cancel(['tid' => $tid, 'steps' => $this->getSteps()]);
+    }
+
+    public function setTransactionID($tid)
+    {
+        $this->context->set('_transaction_id', $tid);
     }
 
     public function getTransactionID()

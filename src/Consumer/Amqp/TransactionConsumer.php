@@ -56,11 +56,12 @@ class TransactionConsumer extends ConsumerMessage
                 $this->counter[$service] = [
                     'retry_' . $this->action . '_count' => 0, // 次数
                     'retry_success' => 0, // 成功
-                    'retry_fail' => 0 // 最终失败
+                    'retry_fail' => 0, // 最终失败
+                    'retrying' => 0
                 ];
             }
 
-            if ($this->counter[$service]['retry_success'] || $this->counter[$service]['retry_fail'])
+            if ($this->counter[$service]['retrying'] || $this->counter[$service]['retry_success'] || $this->counter[$service]['retry_fail'])
             {
                 continue;
             }
@@ -75,6 +76,10 @@ class TransactionConsumer extends ConsumerMessage
 
             $parallel []= function() use ($step, $service)
             {
+                // 当前协程内传递状态数据
+                $this->recorder->setTransactionID($this->tid);
+                $this->recorder->setStart();
+
                 $container = $this->container->get($service);
                 $result = call_user_func_array([$container, $step['on' . ucfirst($this->action)]], $step['params']);
 

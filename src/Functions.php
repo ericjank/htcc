@@ -14,6 +14,13 @@ use Hyperf\Rpc\Context as RpcContext;
 use Ericjank\Htcc\Exception\RpcTransactionException;
 use Ericjank\Htcc\Recorder;
 
+if (! function_exists('getRpcTransID')) 
+{
+    function getRpcTransID() {
+        return ApplicationContext::getContainer()->get(Recorder::class)->getTransactionID();
+    }
+}
+
 if (! function_exists('inRpcTrans')) 
 {
     function inRpcTrans() {
@@ -36,7 +43,6 @@ if (! function_exists('rpcTransCallback'))
 
 if (! function_exists('hasRpcTransError'))
 {
-    // TODO 被调用的接口try方法内需调用 hasRpcTransError 防悬挂
     function hasRpcTransError()
     {
         $rpc_error = ApplicationContext::getContainer()->get(Recorder::class)->getError();
