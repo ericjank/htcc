@@ -13,38 +13,70 @@ declare(strict_types=1);
 namespace Ericjank\Htcc;
 
 use Hyperf\Utils\ApplicationContext;
+use Ericjank\Htcc\Exception\RpcTransactionException;
 
 class Producer
 {
-    public static function send($message, $type = 'success')
+    public static $drivers = [];
+
+    public static function getInstance()
     {
         $driver = ucfirst(config('htcc.producer_driver', 'amqp'));
 
-        switch ($driver) {
+        if (isset(self::$drivers[$driver]))
+        {
+            return self::$drivers[$driver];
+        }
+
+        switch ($driver) 
+        {
             case 'Amqp':
-                if ($type == 'fail') 
-                {
-                    $producerMessage = new \Ericjank\Htcc\Producer\Amqp\TransactionFailProducer($message);
-                }
-                else if ($type == 'confirm')
-                {
-                    $producerMessage = new \Ericjank\Htcc\Producer\Amqp\TransactionConfirmProducer($message);
-                } 
-                else 
-                {
-                    $producerMessage = new \Ericjank\Htcc\Producer\Amqp\TransactionProducer($message);
-                }
-                
-                $producer = ApplicationContext::getContainer()->get(\Hyperf\Amqp\Producer::class);
-                return $producer->produce($producerMessage);
-                break;
+                self::$drivers[$driver] = ApplicationContext::getContainer()->get(\Hyperf\Amqp\Producer::class);
+                return self::$drivers[$driver];
             
             default:
-                # code...
                 break;
         }
 
         return null;
+    }
+
+    public static function getMessager($message, $type = 'success')
+    {
+        $driver = ucfirst(config('htcc.producer_driver', 'amqp'));
+
+        switch ($driver) 
+        {
+            case 'Amqp':
+                if ($type == 'fail') 
+                {
+                    return new \Ericjank\Htcc\Producer\Amqp\TransactionFailProducer($message);
+                }
+                else if ($type == 'confirm')
+                {
+                    return new \Ericjank\Htcc\Producer\Amqp\TransactionConfirmProducer($message);
+                }
+
+                return new \Ericjank\Htcc\Producer\Amqp\TransactionProducer($message);
+
+            default:
+                break;
+        }
+
+        return null;
+    }
+
+    public static function send($message, $type = 'success')
+    {
+        $producer = self::getInstance();
+
+        if ( ! empty($producer))
+        {
+            $messager = self::getMessager($message, $type);
+            return $producer->produce($messager);
+        }
+
+        throw new RpcTransactionException(sprintf("Htcc producer driver %s not found.", config('htcc.producer_driver', 'amqp')), 4002);
     }
 
     public static function confirm($tid)
