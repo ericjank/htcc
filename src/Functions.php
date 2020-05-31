@@ -34,10 +34,15 @@ if (! function_exists('rpcTransCallback'))
 
         if (inRpcTrans())
         {
+            if (is_array($message))
+            {
+                $code = $message['code'];
+                $message = $message['message'];
+            }
             throw new RpcTransactionException($message, $code);    
         }
 
-        return $normal();
+        return is_callable($normal) ? $normal() : $normal;
     }
 }
 
