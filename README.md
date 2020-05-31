@@ -86,6 +86,109 @@ rpcTransCallback(function() {
 }, '事务状态下的异常消息', '事务状态下的异常CODE')
 ```
 
+# 使用 Ericjank\Htcc\Catcher 处理分布式事务防悬挂、空回滚等问题
+
+## try 阶段
+
+通过注入 Ericjank\Htcc\Catcher 获取对象 $this->catcher
+
+```
+// 分布式事务安全验证开始
+$tried = $this->catcher->try();
+
+if ( ! $tried)
+{
+    $code = $this->catcher->getCode();
+    switch ($code) {
+        case CatcherCode::HTCC_CATCHER_IDEMPOTENT:
+            return ['code' => 200];
+
+        case CatcherCode::HTCC_CATCHER_ERR:
+            throw new RpcTransactionException($code, $this->catcher->getMessage());
+        
+        default:
+            throw new RpcTransactionException($code, '未知错误');
+    }
+}
+// 分布式事务安全验证结束
+
+// ... 业务代码
+
+// 使用 setParams 方法可以在各个try、confirm、cancel方法之间传递数据
+$this->catcher->setParams([
+    'u' => 1
+]);
+
+// 使用 getParam 方法获取 setParams 设置的数据
+$this->catcher->getParam('u');
+
+
+$this->catcher->lock($value); // 可以记录资源变动数值, 可选, 通常变动的值会通过参数传递到confirm、cancel阶段所以一般无需记录
+
+// 处理成功时设置try阶段完成
+$this->catcher->pass();
+```
+
+## confirm 阶段
+```
+// 分布式事务安全验证开始
+$confirm = $this->catcher->confirm(function() {
+    // 未发现空回滚、防悬挂等问题后执行的回调函数
+    // 回调结束后会自动释放锁
+    // 如果不设置这个回调, 则在返回成功信息前需要手动释放锁 $this->catcher->release()
+    
+    // ... 业务代码
+});
+
+if ( ! $confirm)
+{
+    $code = $this->catcher->getCode();
+    switch ($code) {
+        case CatcherCode::HTCC_CATCHER_IDEMPOTENT:
+            return true;
+
+        case CatcherCode::HTCC_CATCHER_ERR:
+        case CatcherCode::HTCC_CATCHER_CALLBACK_ERR:
+            throw new RpcTransactionException($code, $this->catcher->getMessage());
+        
+        default:
+            throw new RpcTransactionException($code, '未知错误');
+    }
+}
+// 分布式事务安全验证结束
+
+$value = $this->catcher->getLock(); // 获取由lock记录的资源变动数值
+```
+
+## cancel 阶段
+```
+// 分布式事务安全验证开始
+$cancel = $this->catcher->cancel(function() {
+    // 未发现空回滚、防悬挂等问题后执行的回调函数
+    // 回调结束后会自动释放锁
+    // 如果不设置这个回调, 则在返回成功信息前需要手动释放锁 $this->catcher->release()
+
+    // ... 业务代码
+});
+
+if ( ! $cancel)
+{
+    $code = $this->catcher->getCode();
+    switch ($code) {
+        case CatcherCode::HTCC_CATCHER_IDEMPOTENT:
+            return true;
+
+        case CatcherCode::HTCC_CATCHER_ERR:
+        case CatcherCode::HTCC_CATCHER_CALLBACK_ERR:
+            throw new RpcTransactionException($code, $this->catcher->getMessage());
+        
+        default:
+            throw new RpcTransactionException($code, '未知错误');
+    }
+}
+// 分布式事务安全验证结束
+```
+
 
 # 函数
 
