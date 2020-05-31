@@ -23,9 +23,9 @@ class HCheckStatus extends Script
     if status == nil then
         return false;
     elseif status == 1 then
+        redis.call('del', KEYS[1]);
         return 1;
     elseif status == 0 then
-        redis.call('hDel', KEYS[1], 'status');
         return 0;
     end
     return true;

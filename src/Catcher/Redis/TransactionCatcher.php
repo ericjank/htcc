@@ -52,7 +52,7 @@ class TransactionCatcher
 
     public function setKey($hashKey)
     {
-        $this->hash = 'htcc:catcher:' . $hashKey;
+        $this->hash = 'htcc:ch:' . $hashKey;
         
         echo "set hash key for catcher: $hashKey\n";
     }
@@ -83,6 +83,11 @@ class TransactionCatcher
         }
     }
 
+    public function pass()
+    {
+        $this->setStatus(0);
+    }
+
     public function try(): bool
     {
         $status = $this->redisCheckStatus->eval([$this->hash]);
@@ -96,7 +101,7 @@ class TransactionCatcher
                 return false;
             }
 
-            if ($status == 1) // 出现空回滚或悬挂，抛弃本次响应
+            else if ($status == 1) // 出现空回滚或悬挂，抛弃本次响应
             {
                 // 在lua中已经删除此事务的状态信息
                 $this->message = '空回滚或悬挂';
@@ -152,6 +157,10 @@ class TransactionCatcher
 
         if ($status === false) {
             $this->setStatus(1);
+            $this->redis->expireAt($this->hash, time() + 3600 * 24 * 7); // 异常状态下 $this->hash 可能永远不会被释放
+
+            $this->message = '其他请求已经抢先到达, 并且处理完成cancel阶段任务, 本次无需任何处理, 可直接返回实现幂等';
+            $this->code = CatcherCode::HTCC_CATCHER_IDEMPOTENT;
 
             return false;
         }
