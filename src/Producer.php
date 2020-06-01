@@ -18,6 +18,7 @@ use Ericjank\Htcc\Exception\RpcTransactionException;
 class Producer
 {
     public static $drivers = [];
+    public static $messager = [];
 
     public static function getInstance()
     {
@@ -48,17 +49,30 @@ class Producer
         switch ($driver) 
         {
             case 'Amqp':
-                if ($type == 'fail') 
+
+                if ( isset(self::$messager[$type]))
                 {
-                    return new \Ericjank\Htcc\Producer\Amqp\TransactionFailProducer($message);
+                    // TODO 检查内存泄露
+                    $messager = clone self::$messager[$type];
+                    $messager->setPayload($message);
+                    return $messager;
                 }
-                else if ($type == 'confirm')
+                else 
                 {
-                    return new \Ericjank\Htcc\Producer\Amqp\TransactionConfirmProducer($message);
+                    if ($type == 'fail') 
+                    {
+                        self::$messager[$type] = new \Ericjank\Htcc\Producer\Amqp\TransactionFailProducer($message);
+                        return self::$messager[$type];
+                    }
+                    else if ($type == 'confirm')
+                    {
+                        self::$messager[$type] = new \Ericjank\Htcc\Producer\Amqp\TransactionConfirmProducer($message);
+                        return self::$messager[$type];
+                    }
                 }
 
-                return new \Ericjank\Htcc\Producer\Amqp\TransactionProducer($message);
-
+                self::$messager[$type] = new \Ericjank\Htcc\Producer\Amqp\TransactionProducer($message);
+                return self::$messager[$type];
             default:
                 break;
         }
@@ -72,8 +86,7 @@ class Producer
 
         if ( ! empty($producer))
         {
-            $messager = self::getMessager($message, $type);
-            return $producer->produce($messager);
+            return $producer->produce( self::getMessager($message, $type) );
         }
 
         throw new RpcTransactionException(sprintf("Htcc producer driver %s not found.", config('htcc.producer_driver', 'amqp')), 4002);
