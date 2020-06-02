@@ -20,12 +20,12 @@ class HCheckStatus extends Script
         return <<<'LUA'
     local status = redis.call('hGet', KEYS[1], 'status');
 
-    if status == nil then
+    if not status then
         return false;
-    elseif status == 1 then
+    elseif status == '1' then
         redis.call('del', KEYS[1]);
         return 1;
-    elseif status == 0 then
+    elseif status == '0' then
         return 0;
     end
     return true;
@@ -38,7 +38,7 @@ LUA;
      */
     public function format($data)
     {
-        return (bool)$data;
+        return $data;
     }
 
     protected function getKeyNumber(array $arguments): int
