@@ -164,7 +164,7 @@ class TransactionCatcher
 
             return false;
         }
-        else if (0 === $status)
+        else if (0 == $status)
         {
             if ($onCancel && is_callable($onCancel))
             {
