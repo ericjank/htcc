@@ -50,8 +50,10 @@ if (! function_exists('hasRpcTransError'))
 {
     function hasRpcTransError()
     {
-        $rpc_error = ApplicationContext::getContainer()->get(Recorder::class)->getError();
-        return ! empty($rpc_error) ? $rpc_error : false;
+        $recorder = ApplicationContext::getContainer()->get(Recorder::class);
+        $rpc_error = $recorder->getError();
+        $trc_error = $recorder->getErrorMessage();
+        return (! empty($rpc_error) || ! empty($trc_error)) ? true : false;
     }
 }
 

@@ -110,6 +110,13 @@ class TransactionCatcher
             }
         }
 
+        defer(function() {
+            if (! hasTransError() )
+            {
+                $this->pass();
+            }
+        });
+
         return true;
     }
 
