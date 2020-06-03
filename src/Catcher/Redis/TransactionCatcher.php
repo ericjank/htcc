@@ -88,7 +88,7 @@ class TransactionCatcher
         $this->setStatus(0);
     }
 
-    public function try(): bool
+    public function try(bool $throw = false): bool
     {
         defer(function() {
             if (! hasRpcTransError() )
@@ -105,6 +105,11 @@ class TransactionCatcher
             {
                 $this->message = '其他请求已经抢先到达, 并且处理完成try阶段任务, 本次无需任何处理, 可直接返回实现幂等';
                 $this->code = CatcherCode::HTCC_CATCHER_IDEMPOTENT;
+
+                if ($throw)
+                {
+                    throw new RpcTransactionException($this->message, $this->code);
+                }
                 return false;
             }
 
@@ -113,6 +118,11 @@ class TransactionCatcher
                 // 在lua中已经删除此事务的状态信息
                 $this->message = '空回滚或悬挂';
                 $this->code = CatcherCode::HTCC_CATCHER_ERR;
+
+                if ($throw)
+                {
+                    throw new RpcTransactionException($this->message, $this->code);
+                }
                 return false;
             }
         }
@@ -120,7 +130,7 @@ class TransactionCatcher
         return true;
     }
 
-    public function confirm($onConfirm = null)
+    public function confirm($onConfirm = null, bool $throw = false)
     {
         $status = $this->redis->hGet($this->hash, 'status');
 
@@ -128,6 +138,12 @@ class TransactionCatcher
         {
             $this->message = '其他请求已经抢先到达, 并且处理完成confirm阶段任务, 本次无需任何处理, 可直接返回实现幂等';
             $this->code = CatcherCode::HTCC_CATCHER_IDEMPOTENT;
+
+            if ($throw)
+            {
+                throw new RpcTransactionException($this->message, $this->code);
+            }
+
             return false;
         }
 
@@ -135,6 +151,11 @@ class TransactionCatcher
         {
             $this->message = '发生不可预知错误';
             $this->code = CatcherCode::HTCC_CATCHER_ERR;
+
+            if ($throw)
+            {
+                throw new RpcTransactionException($this->message, $this->code);
+            }
             return false;
         }
 
@@ -150,6 +171,11 @@ class TransactionCatcher
             {
                 $this->message = 'confirm回调发生错误';
                 $this->code = CatcherCode::HTCC_CATCHER_CALLBACK_ERR;
+
+                if ($throw)
+                {
+                    throw new RpcTransactionException($this->message, $this->code);
+                }
             }
 
             return $result;
@@ -158,7 +184,7 @@ class TransactionCatcher
         return true;
     }
 
-    public function cancel($onCancel = null)
+    public function cancel($onCancel = null, bool $throw = false)
     {
         $status = $this->redis->hGet($this->hash, 'status');
 
@@ -168,6 +194,11 @@ class TransactionCatcher
 
             $this->message = '其他请求已经抢先到达, 并且处理完成cancel阶段任务, 本次无需任何处理, 可直接返回实现幂等';
             $this->code = CatcherCode::HTCC_CATCHER_IDEMPOTENT;
+
+            if ($throw)
+            {
+                throw new RpcTransactionException($this->message, $this->code);
+            }
 
             return false;
         }
@@ -185,6 +216,11 @@ class TransactionCatcher
                 {
                     $this->message = 'cancel回调发生错误';
                     $this->code = CatcherCode::HTCC_CATCHER_CALLBACK_ERR;
+
+                    if ($throw)
+                    {
+                        throw new RpcTransactionException($this->message, $this->code);
+                    }
                 }
 
                 return $result;
@@ -195,6 +231,11 @@ class TransactionCatcher
 
         $this->message = '发生不可预知错误';
         $this->code = CatcherCode::HTCC_CATCHER_ERR;
+
+        if ($throw)
+        {
+            throw new RpcTransactionException($this->message, $this->code);
+        }
         return false;
     }
 
