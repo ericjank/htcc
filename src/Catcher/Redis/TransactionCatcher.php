@@ -111,7 +111,7 @@ class TransactionCatcher
         }
 
         defer(function() {
-            if (! hasTransError() )
+            if (! hasRpcTransError() )
             {
                 $this->pass();
             }
