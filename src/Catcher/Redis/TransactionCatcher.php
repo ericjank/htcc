@@ -79,7 +79,7 @@ class TransactionCatcher
     {
         if ( ! $this->redis->hSet($this->hash, 'status', $status ? 1 : 0))
         {
-            throw new RpcTransactionException(sprintf("Htcc error: can not hold a %s to %s!", $key, $this->hash), 4004);
+            throw new RpcTransactionException(sprintf("Htcc error: can not hold hash %s!", $this->hash), 4004);
         }
     }
 
