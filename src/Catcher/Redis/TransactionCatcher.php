@@ -77,7 +77,7 @@ class TransactionCatcher
 
     public function setStatus(int $status)
     {
-        if ( ! $this->redis->hSet($this->hash, 'status', $status ? 1 : 0))
+        if ( false === $this->redis->hSet($this->hash, 'status', $status ? 1 : 0))
         {
             throw new RpcTransactionException(sprintf("Htcc error: can not hold hash %s!", $this->hash), 4004);
         }
